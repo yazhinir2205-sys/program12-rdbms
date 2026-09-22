@@ -1,0 +1,168 @@
+name: Lab Program 12 - ER Diagram Autograding
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  autograding:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check Required Files
+        run: |
+          echo "======================================"
+          echo "Checking required submission files"
+          echo "======================================"
+
+          test -f ER_Diagram.mwb
+          test -f ER_Diagram.png
+          test -f model_check.txt
+          test -f README.md
+          test -f TEST_CASE.md
+
+          echo "All required files are present."
+
+      - name: Check File Sizes
+        run: |
+          echo "Checking file sizes..."
+
+          if [ ! -s ER_Diagram.mwb ]; then
+            echo "ERROR: ER_Diagram.mwb is empty."
+            exit 1
+          fi
+
+          if [ ! -s ER_Diagram.png ]; then
+            echo "ERROR: ER_Diagram.png is empty."
+            exit 1
+          fi
+
+          if [ ! -s model_check.txt ]; then
+            echo "ERROR: model_check.txt is empty."
+            exit 1
+          fi
+
+          echo "File size checks passed."
+
+      - name: Check PNG File
+        run: |
+          echo "Checking ER diagram image..."
+
+          FILE_TYPE=$(file ER_Diagram.png)
+
+          echo "$FILE_TYPE"
+
+          if echo "$FILE_TYPE" | grep -qi "PNG image data"; then
+            echo "PASS: Valid PNG image."
+          else
+            echo "FAIL: ER_Diagram.png is not a valid PNG file."
+            exit 1
+          fi
+
+      - name: Check MySQL Workbench Model
+        run: |
+          echo "Checking MySQL Workbench model..."
+
+          FILE_SIZE=$(stat -c%s ER_Diagram.mwb)
+
+          if [ "$FILE_SIZE" -gt 100 ]; then
+            echo "PASS: ER_Diagram.mwb contains data."
+          else
+            echo "FAIL: ER_Diagram.mwb appears to be empty or invalid."
+            exit 1
+          fi
+
+      - name: Check Model Specification
+        run: |
+          echo "======================================"
+          echo "Checking model specification"
+          echo "======================================"
+
+          FILE="model_check.txt"
+
+          PASS=0
+          FAIL=0
+
+          check() {
+            NAME="$1"
+            PATTERN="$2"
+
+            if grep -Eiq "$PATTERN" "$FILE"; then
+              echo "PASS: $NAME"
+              PASS=$((PASS+1))
+            else
+              echo "FAIL: $NAME"
+              FAIL=$((FAIL+1))
+            fi
+          }
+
+          check "Student entity" \
+            "Student Entity:[[:space:]]*YES"
+
+          check "Course entity" \
+            "Course Entity:[[:space:]]*YES"
+
+          check "Faculty entity" \
+            "Faculty Entity:[[:space:]]*YES"
+
+          check "Department entity" \
+            "Department Entity:[[:space:]]*YES"
+
+          check "Student primary key" \
+            "Student Primary Key:[[:space:]]*StudentID"
+
+          check "Course primary key" \
+            "Course Primary Key:[[:space:]]*CourseID"
+
+          check "Faculty primary key" \
+            "Faculty Primary Key:[[:space:]]*FacultyID"
+
+          check "Department primary key" \
+            "Department Primary Key:[[:space:]]*DepartmentID"
+
+          check "Department-Student relationship" \
+            "Department-Student Relationship:[[:space:]]*YES"
+
+          check "Department-Student 1:N" \
+            "Department-Student Cardinality:[[:space:]]*1:N"
+
+          check "Faculty-Course relationship" \
+            "Faculty-Course Relationship:[[:space:]]*YES"
+
+          check "Faculty-Course 1:N" \
+            "Faculty-Course Cardinality:[[:space:]]*1:N"
+
+          check "Student-Course relationship" \
+            "Student-Course Relationship:[[:space:]]*YES"
+
+          check "Student-Course M:N" \
+            "Student-Course Cardinality:[[:space:]]*M:N"
+
+          check "Enrollment associative entity" \
+            "Associative Entity for Student-Course:[[:space:]]*Enrollment"
+
+          check "One-to-One addressed" \
+            "One-to-One Relationship:[[:space:]]*NOT REQUIRED|One-to-One Relationship:[[:space:]]*YES"
+
+          check "Visual diagram created" \
+            "Visual Diagram Created in MySQL Workbench:[[:space:]]*YES"
+
+          echo ""
+          echo "======================================"
+          echo "AUTOGRADING RESULT"
+          echo "======================================"
+
+          echo "Passed: $PASS"
+          echo "Failed: $FAIL"
+
+          if [ "$FAIL" -eq 0 ]; then
+            echo "ALL AUTOMATED CHECKS PASSED"
+          else
+            echo "SOME AUTOMATED CHECKS FAILED"
+            exit 1
+          fi
